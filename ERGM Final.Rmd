@@ -1,0 +1,712 @@
+---
+title: "ERGM Assignment: Looking at Networks in BoJack Horseman"
+author: "Lauren Fowler"
+date: "12/14/2023"
+output: pdf_document
+editor_options: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
+```
+
+# I. Introduction
+
+This assignment provides a glimpse into the social network of the show BoJack Horseman through exploratory visual analysis of networks, network analysis of actor prominence, and analysis of the networks through ERGMs (exponential random graph models).
+
+BoJack Horseman is a psychological comedy-drama animated television show centered around the main character, BoJack (BJH).
+BJH is an old 90's sitcom star living in current-day Hollywood trying to become relevant once again.
+However, BJH's journey is all but easy as he suffers from various mental illnesses, including substance use disorder and borderline personality disorder (BPD).
+The show focuses on BJH's attempts to get back into the entertainment industry and the various relationships he makes along the way.
+
+This assignment provides an overall analysis of the total perceived friendship and total economic exchange networks in the show.
+We see throughout the show how much of an impact working in the entertainment industry has on the characters lives and relationships.
+Therefore, with this assignment we want to analyze these aspects via social network analysis.
+
+For the analysis, I focused on perceived friendship and economic relationships.
+I measured perceived friendship based on how I interpreted how the characters viewed each other (i.e., who thought who was their friend) and economic relationships by who worked with whom in a job.
+As for nodes, any character that was deemed a main or reoccurring character was considered a node.
+
+For part of this project we are specifically looking at how character type and occupation effect the networks.
+We categorized character type by human or animal and occupation by entertainment industry, actor/actress, written media, other (non-entertainment jobs), N/A.
+
+# II. Exploratory Visualizations of the Network:
+
+# Perceived Friendship
+
+To begin, we will explore the perceived friendship network of the show, starting off looking at the total perceived friendship relationships throughout the entire show.
+
+As a side note, after data visualization assignment one, more nodes were added to the network, and nodal characteristics were redefined to consolidate categories.
+Therefore, for this assignment we will look at the redefined networks, but in the same way we would have in the previous data assignments.\
+**Figure 1**: Total Perceived Friendships Over Time
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+setwd("~/Working Directory")
+# loading packages
+library(ideanet)
+library(igraph)
+library(tidyverse)
+##Total Friendship
+edges <- read.csv("EdgesTF.csv")
+nodes <- read.csv("NewNodes.csv")
+help(package = "ideanet")
+?netread
+netread("EdgesTF.csv", format = "edgelist", filetype = ".csv", nodelist = "NewNodes.csv")
+netwrite(nodelist = network_nodelist, shiny = T,
+         node_id = "ID",
+         i_elements = network_edgelist$i_elements,
+         j_elements = network_edgelist$j_elements,
+         dir = TRUE)
+par(mar = c(0,0,0,0), mfrow = c(1,1))
+nice_coords <- layout_(network, nicely())
+total_friend <- network
+plot(total_friend, vertex.label = V(total_friend)$attr,
+     vertex.size = 10, edge.arrow.size = 0.2, vertex.color = "darksalmon", layout = nice_coords)
+```
+
+```{=tex}
+\begin{center}
+Figure 1 depicts the total perceived friendship network.
+\end{center}
+```
+From this figure we can see that the network appears to be centered around the nodes of PC, DN, BJH, TC, and MP.
+BJH seems to have the highest amount of ties and may act as a bridge between higher density regions.
+This analysis makes sense in regards to the show as PC, DN, BJH, TC, and MP are the main characters, with the show being centered around BJH.
+
+Next we will look at the same network, but nodes are categorized by color according to the occupation they have.
+
+**Figure 2**: Total Perceived Friendships Over Time - Occupation
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+total_friend <- network
+V(total_friend)$color_Occupation_n <- case_when(V(total_friend)$Occupation == "Entertainment" ~ "cyan4",
+                                         V(total_friend)$Occupation == "Writen Media" ~ "darkseagreen",
+                                         V(total_friend)$Occupation == "Actor" ~ "darkgoldenrod",
+                                         V(total_friend)$Occupation == "N/A" ~ "darkmagenta",
+                                         V(total_friend)$Occupation == "Other" ~ "cornflowerblue")
+plot(total_friend, 
+     vertex.color = V(total_friend)$color_Occupation_n, 
+     vertex.label = NA,
+     vertex.label = V(total_friend)$ID,
+     vertex.size = 8, 
+     edge.arrow.size = 0.2, 
+     layout = nice_coords)
+```
+
+```{=tex}
+\begin{center}
+Figure 2 depicts total perceived friendship colored by occupation.
+\end{center}
+```
+Teal = Entertainment\
+Green = Written Media\
+Gold = Actor/Actress\
+Purple = N/A\
+Blue = Other
+
+When looking at Figure 2, there does appear to be a small clustering of entertainment nodes in the network, but nothing else stands out.
+
+Again we will look at the same network, but nodes are categorized by color according to their character type they have.
+
+\
+**Figure 3**: Total Perceived Friendships Over Time - Character Type
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+V(total_friend)$color_Animal_n <- case_when(V(total_friend)$Animal == "Animal" ~ "coral3",
+                                                V(total_friend)$Animal == "Human" ~ "darkolivegreen")
+plot(total_friend, 
+     vertex.color = V(total_friend)$color_Animal_n, 
+     vertex.label = NA,
+     vertex.label = V(total_friend)$attr,
+     vertex.size = 8, 
+     edge.arrow.size = 0.2, 
+     layout = nice_coords)
+```
+
+```{=tex}
+\begin{center}
+Figure 3 depicts total perceived friendship colored by character type.
+\end{center}
+```
+Orange = Animal\
+Green = Human
+
+\
+From Figure 3, we can see that there appears to be an equal amount of humans and animals.
+From observation alone, it looks as though if a node is an animal, it is more likely to have a tie with another animal, but this is pure speculation.
+
+Overall, our total perceived friendship network does appear to be centralized around the main characters, but not much more can be said at this point until further analysis is done.
+
+# III. Actor Prominence: Perceived Friendship
+
+Next, we will look at actor prominence/centrality of the total perceived friendship network.
+Centrality is useful to understand who may have power, influence, and prestige in a group.
+We most commonly measure centrality by either degree, closeness, or betweenness.
+We can also look at the centralization of the friendship network.
+The more centralized a network, the more the structure of the network is one in which more central positions are dominated by few powerful or influential actors.
+We can look at the centralization for all modes of centrality.\
+For this network, we will look centrality by degree, which is the number of nodes to which each node is adjacent.
+Specifically, we will look at the in-degree, which is the number of nodes one receives from, because we are interested in the perception of friendship.
+Therefore, if someone sends a tie, but does not receive it, they should have a lesser degree of centrality in the network.\
+
+For this analysis, we will get rid of isolates and dyads so they do not effect the centrality of the network.\
+
+**Figure 4**: Total Perceived Friendships Over Time - No Isolates
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+# I'll remove isolates for the following
+isos <- which(degree(total_friend)==0)
+total_friend2 <- delete_vertices(total_friend, isos)
+# and, well, I'm going to delete that freestanding dyad as well
+total_friend3 <- delete_vertices(total_friend2, c(16, 18, 12, 13))
+par(mar = c(0,0,0,0), mfrow = c(1,1))
+nice_coords <- layout_(total_friend3, nicely())
+plot(total_friend3, vertex.label = V(total_friend3)$attr,
+     vertex.size = 12, edge.arrow.size = 0.2, vertex.color = "darksalmon", layout = nice_coords)
+```
+
+```{=tex}
+\begin{center}
+Figure 4 depicts total perceived friendship after removal of isolates and dyads.
+\end{center}
+```
+Okay, now let's look at degree centrality.
+
+**Figure 5**: Degree Centrality Total Perceived Friendship
+
+```{r fig.align='center', fig.width=8, fig.height=5}
+#degree(total_friend3, mode = "in")
+### how to use that in a plot, say with in degree
+plot.igraph(total_friend3, vertex.size = degree(total_friend3, mode = "in")*3, 
+            edge.arrow.size = 0.2,
+            layout = nice_coords, vertex.color = "darksalmon",
+            vertex.label = NA)
+```
+
+```{=tex}
+\begin{center}
+Figure 5 depicts the degree centrality of the total perceived friendships over the entire show the (nodes were scaled by 3x for better visualization).
+\end{center}
+```
+```{r fig.align='center', fig.width=8, fig.height=5}
+centr_degree(total_friend3, mode = "in")$centralization
+
+```
+
+From the figure, we can see the degree of centrality of the actors.
+Larger nodes equate to a greater degree of centrality.
+From this we see BJH, overall, has the highest degree of centrality followed by PC, TC, DN, and then MP.
+This is expected for the show as BJH is the main character, and the four other actors are the main supporting roles, so their stories are followed more closely than other characters.
+
+\
+**Figure 6**: Degree Distribution Total Perceived Friendship
+
+```{r fig.align='center', fig.width=8, fig.height=3}
+d <- data.frame(degree = degree(total_friend3, mode = "in"), 
+                between = betweenness(total_friend3), 
+                close = closeness(total_friend3, mode = "in"))
+ggplot(d, aes(degree)) + geom_histogram(bins = 10, fill = "salmon") + 
+  labs(title = "Degree Distribution of Total Perceived Friendship") + 
+  theme_minimal()
+```
+
+```{=tex}
+\begin{center}
+Figure 6 depicts the degree distribution of total perceived friendship.  
+\end{center}
+```
+Figure 6 shows that degree distributions tend to be right-skewed, meaning only a few of the nodes in the network have most of the ties, which is illustrated in Figure 5.
+Therefore, regarding degree distributions, the total perceived friendship network is highly centralized.
+
+Next, we can look at betweenness, which is the proportion of shortest paths a node is on.
+Thus, the larger the node, the higher the betweenness, and the greater the proportion of shortest paths it is on.\
+
+**Figure 7**: Betweenness Centrality Total Perceived Friendship
+
+```{r fig.align='center', fig.width=8, fig.height=5}
+#betweenness(total_friend3)
+plot.igraph(total_friend3, vertex.size = sqrt(betweenness(total_friend3)/0.2),
+            edge.arrow.size = 0.3,
+            layout = nice_coords,vertex.color = "darksalmon",
+            vertex.label = NA)
+```
+
+```{r fig.align='center', fig.width=8, fig.height=5}
+## for betweenness
+centr_betw(total_friend3)$centralization
+```
+
+```{=tex}
+\begin{center}
+Figure 7 depicts the betweenness centrality of the total perceived friendships over the entire show. Nodes are scaled by the square root divided by 0.2.  
+\end{center}
+```
+Figure 7 shows that BJH, PC, TC, DN, and MP have the highest betweenness centrality.
+Again, these are the main characters, so it makes sense that they are central to the network.
+Now, looking at centralization regarding betweenness:
+
+\
+**Figure 8**: Betweenness Distribution Total Perceived Friendship
+
+```{r, fig.align='center', fig.width=8, fig.height=3}
+ggplot(d, aes(between)) + geom_histogram(bins = 10, fill = "salmon") + 
+  labs(title = "Distribution of Betweenness Centrality of Total Perceived Friendship") + 
+  theme_minimal()
+```
+
+```{=tex}
+\begin{center}
+Figure 8 depicts the betweenness distribution of total perceived friendship.  
+\end{center}
+```
+Figure 8 shows the betweenness distribution is more right-skewed.
+Therefore, the total perceived friendship network is highly centralized, which makes sense based on Figure 7.\
+
+So far, we have seen that our perceived friendship network is highly centralized around our main character and the supporting characters as we would expect it to be.
+We also suspect that their may be some clustering occurring based on occupation and tie formation based on character type.
+However, to see if that is the case, we will have to run some more analyses.
+
+Before we get to that, we are going to explore one more relationship type, economic exchange.
+
+# IV. Exploratory Visualizations of the Network: Economic Exchange
+
+Let's begin by looking at the total economic exchange network.
+
+**Figure 9**: Total Economic Exchange Over Time
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+##Total Economic
+edges <- read.csv("TEedges.csv")
+nodes <- read.csv("NewNodes.csv")
+help(package = "ideanet")
+?netread
+netread("TEedges.csv", format = "edgelist", filetype = ".csv", nodelist = "NewNodes.csv")
+netwrite(nodelist = network_nodelist, shiny = T,
+         node_id = "ID",
+         i_elements = network_edgelist$i_elements,
+         j_elements = network_edgelist$j_elements)
+par(mar = c(0,0,0,0), mfrow = c(1,1))
+nice_coords <- layout_(network, nicely())
+total_economic <- network
+plot(total_economic, vertex.label = V(total_economic)$attr,
+     vertex.size = 10, edge.arrow.size = 0.2, vertex.color = "chartreuse3", layout = nice_coords)
+```
+
+```{=tex}
+\begin{center}
+Figure 7 depicts total economic exchange overtime.
+\end{center}
+```
+From this figure, we can see that the economic network in the show is much more dense than the perceived friendship network.
+There seems to be multiple regions of high density, with BJH having the most influence in the network as he appears to have the highest amount of ties.
+However, further analysis needs to be done to actually see if this is what we are observing.
+
+Next we will look at the same network, but nodes are categorized by color according to the occupation they have.
+
+**Figure 10**: Total Economic Exchange Over Time - Occupation
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+V(total_economic)$color_Occupation_n <- case_when(V(total_economic)$Occupation == "Entertainment" ~ "cyan4",
+                                                  V(total_economic)$Occupation == "Writen Media" ~ "darkseagreen",
+                                                  V(total_economic)$Occupation == "Actor" ~ "darkgoldenrod",
+                                                  V(total_economic)$Occupation == "N/A" ~ "darkmagenta",
+                                                  V(total_economic)$Occupation == "Other" ~ "cornflowerblue")
+
+plot(total_economic, 
+     vertex.color = V(total_economic)$color_Occupation_n, 
+     vertex.label = NA,
+     vertex.size = 8, 
+     edge.arrow.size = 0.15, 
+     layout = nice_coords)
+```
+
+```{=tex}
+\begin{center}
+Figure 8 depicts total economic exchange overtime colored by occupation.
+\end{center}
+```
+Cyan = Entertainment\
+Green = Written Media\
+Gold = Actor/Actress\
+Purple = N/A\
+Blue = Other
+
+Based solely on observation, it looks as though nodes who have jobs in entertainment or acting are more central to the network, but more analysis is needed to prove this.
+
+Again we will look at the same network, but nodes are categorized by color according to their character type.
+
+**Figure 11**: Total Economic Exchange Over Time - Character Type
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+V(total_economic)$color_Animal_n <- case_when(V(total_economic)$Animal == "Animal" ~ "coral3",
+                                            V(total_economic)$Animal == "Human" ~ "darkolivegreen2")
+
+plot(total_economic, 
+     vertex.color = V(total_economic)$color_Animal_n, 
+     vertex.label = NA,
+     vertex.size = 8, 
+     edge.arrow.size = 0.15, 
+     layout = nice_coords)
+```
+
+```{=tex}
+\begin{center}
+Figure 9 depicts total economic exchange overtime colored by character type
+\end{center}
+```
+Orange = Animal\
+Green = Human
+
+In figure 11 there appears to be an even distribution of nodes for animals and people, so nothing appears to be very significant.
+
+Overall, our total economic exchange network does appears to be centralized, but not much more can be said at this point until further analysis is done.
+
+# V. Actor Prominence: Economic Exchange
+
+Like in the other network, we will look at actor prominence/centrality of the economic network using degree and betweenness.
+
+Again, we will get rid of isolates and dyads so they do not effect the centrality of the network.\
+
+**Figure 12**: Total Economic Exchange Over Time - No Isolates
+
+```{r fig.align='center', fig.width=8, fig.height=5}
+isos <- which(degree(total_economic)==0)
+total_economic2 <- delete_vertices(total_economic, isos)
+par(mar = c(0,0,0,0), mfrow = c(1,1))
+nice_coords <- layout_(total_economic2, nicely())
+plot(total_economic2, vertex.label = V(total_economic2)$attr,
+     vertex.size = 12, vertex.color = "chartreuse3", layout = nice_coords)
+
+```
+
+```{=tex}
+\begin{center}
+Figure 12 depicts total economic exchange without isolates
+\end{center}
+```
+Looking at degree centrality.
+
+**Figure 13**: Degree Centrality Total Economic Exchange
+
+```{r fig.align='center', fig.width=8, fig.height=5}
+plot.igraph(total_economic2, vertex.size = degree(total_economic2), 
+            vertex.color = "chartreuse3", vertex.label = NA, layout = nice_coords)
+```
+
+```{r fig.align='center', fig.width=8, fig.height=5}
+centr_degree(total_economic2)$centralization
+```
+
+```{=tex}
+\begin{center}
+Figure 13 depicts the degree centrality of the total economic exchange over the entire show.
+\end{center}
+```
+From this we see BJH, overall has the highest degree of centrality followed by PC, MP, TC, DN. This is expected for the show as BJH is the main character, and the other four are the main supporting roles.
+
+Looking at the centralization:
+
+**Figure 14**: Degree Distribution Total Economic Exchange
+
+```{r fig.align='center', fig.width=8, fig.height=3}
+d <- data.frame(degree = degree(total_economic2), between = betweenness(total_economic2), close = closeness(total_economic2))
+ggplot(d, aes(degree)) + geom_histogram(bins = 10, fill = "chartreuse3") + 
+  labs(title = "Degree distribution of Economic Exchange Network") + 
+  theme_minimal()
+```
+
+```{=tex}
+\begin{center}
+Figure 14 depicts the degree distribution of total economic exchange.  
+\end{center}
+```
+Figure 14 shows the degree distributions tend to be right-skewed.
+Therefore, regarding degree distributions, the total perceived economic exchange network is highly centralized, so it is dependent on a few powerful nodes.
+
+Now let's look at betweenness centrality.
+
+**Figure 15**: Betweenness Centrality Total Economic Exchange
+
+```{r fig.align='center', fig.width=8, fig.height=5}
+plot.igraph(total_economic2, vertex.size = sqrt(betweenness(total_economic2)/2),
+            vertex.color = "chartreuse3", vertex.label = NA, layout = nice_coords)
+```
+
+```{r fig.align='center', fig.width=8, fig.height=5}
+centr_betw(total_economic2)$centralization
+```
+
+```{=tex}
+\begin{center}
+Figure 15 depicts total economic exchange overtime colored by character type
+\end{center}
+```
+From this, we see that the main characters are the most centralized in the network again.
+
+Now, looking at centralization regarding betweenness.\
+
+**Figure 16**: Betweenness Distribution Total Economic Exchange
+
+```{r fig.align='center', fig.width=8, fig.height=5}
+ggplot(d, aes(between)) + geom_histogram(bins = 10, fill = "chartreuse3") + 
+  labs(title = "Distribution of betweenness centrality in Total Economic Exchange Network") + 
+  theme_minimal()
+```
+
+```{=tex}
+\begin{center}
+Figure 16 depicts the betweenness distribution of total economic exchange.  
+\end{center}
+```
+Figure 16 shows the betweenness distributions tend to be very right-skewed.
+Therefore, regarding betweenness distributions, the total economic exchange network is highly centralized, which makes sense considering the five main characters are the most consistent actors throughout the show, so they interact with more actors.
+
+With this, we see that our economic exchange network is also highly centralized around the main character and our supporting characters as it is expected to be.
+However, we still need further analysis to get a better understanding of if this network is random or some other factor/factors may be affecting tie formation.
+
+Finally, we can take a look at that now!
+
+# VI. ERGMs: Perceived Friendship.
+
+Looking at the total perceived friendship network again, since BJH is an actor, much of the show is centered around life in the entertainment industry.
+Thus, I am curious in understanding if there is evidence of sociality and selective mixing based on occupation, as the entertainment industry depicted is demanding, with characters having to spend a lot of time working.
+Therefore, I would suspect that characters with the same occupation are more likely to become friends and that characters with an entertainment occupation have more ties than other non-entertainment occupations.
+
+Another interesting aspect of the show is that characters can either be animals or humans.
+Producers of the show decided to make some characters animals instead of humans because they believed it would be easier for an audience member to connect with an animal character rather than a human as the animals tend to be more universal in comparison to someone trying to imagine themselves as a specific person.
+With this, many of the animal characters deal with deeper issues that the producers want the audience to connect with, such as mental illness, personality issues, new motherhood, etc, while most of the human characters are one-dimensional.
+Thus, I am curious to see if there is evidence of sociality among character type because I would predict that characters with more dimension (animals) would have more friendships than one-dimensional characters (mostly humans).
+
+For this network, there are a lot of isolates, and, unfortunately, after many attempts, I was unable to look at how degree of 0 impacts the ERGM as the model failed to run.
+Therefore, for this network, I have removed all isolates in an attempt to get better results with the hopes of fixing this issue in the near future.
+
+**Figure 17** : Total Perceived Friendships Over Time ERGM Model Results\newpage
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+library(statnet)
+library(modelsummary)
+library(intergraph)
+tf <- asNetwork(total_friend3)
+
+m1TF <- ergm(tf ~ edges)
+
+m2TF <- ergm(tf ~ edges + nodefactor("Animal") +
+               nodefactor("Occupation"))
+
+m3TF <- ergm(tf ~ edges + nodefactor("Animal") + nodefactor("Occupation") +
+               nodematch("Occupation"))
+
+m4TF <- ergm(tf ~ edges + nodefactor("Animal") + nodefactor("Occupation") +
+               nodematch("Occupation") + 
+               gwesp(decay = 0.25, fixed = T))
+
+modelsTF <- list(m1TF, m2TF, m3TF, m4TF)
+modelsummary(modelsTF, stars = T, exponentiate = T)
+
+```
+
+```{=tex}
+\begin{center}
+Figure 17 is the model summary of 4 different ERGM models for total perceived friendship.
+\end{center}
+```
+Okay, let's go through each model to understand what this means:
+
+**Model 1**: This is just a baseline that we can use for comparison.
+
+**Model 2**: In this model we are looking at sociality based on character type (animal vs. human) and occupation.
+When thinking about sociality, we may also say, "do members of group A tend to have more ties then members of group B?".
+
+Based on this model, we see that human characters are about 44% as likely to form a perceived friendship tie.
+
+We can also observe that characters who have an occupation in entertainment are about 46% as likely to form a perceived friendship tie compared to the baseline occupation, actor/actress.
+
+Characters with the occupation of other are around 10% as likely to form a perceived friendship tie compared to an actor/actress.
+
+\
+**Model 3**: In this model we control for selective mixing.
+When we think about selective mixing we can say, "how much more likely is it for a tie to form between two individuals who hold the same occupation as compared to two individuals with different occupations?".
+
+Firstly, we are seeing that our previous significant results mostly stay significant, a good sign!
+We can also observe that people in the same occupation are about 3x as likely to have form a perceived friendship tie.
+
+**Model 4** - In this model we account for triadic closure.
+Our siginificant result is evidence for triadic closure.
+
+In this model, we may also want to note that our significant results from the other models are mostly taying significant.
+With the inclusion of triadic closure, sociality of characters with the occupation entertainment is no longer significant, and sociality of occupation other and character type human do become less significant, which may be important to note.
+
+Now, the question is what model fits the best to the original network?
+First, we can look at the AIC and BIC scores from our table.
+For these terms, a lower number signifies a better fit, so model 4 is looking like the best representation in regards to that.
+However, we can also measure the goodness of fit of each model.
+For this, we are looking to see if we have high p-values, as we do not want to reject the null hypothesis.
+When looking at the data, we can observe high p-values in model 4 and this model has the lowest AIC and BIC, so model 4 seems to be the best representation of our original network.
+To check this, we are going to run some MCMC Processes.
+When we do, we see some pretty fuzzy caterpillars... a sign that the models are bouncing around the same values aka a good sign!
+
+Goodness of fit and MCMC data can be found in the appendix.
+
+What we seen in our models is similar to what we predicted and makes sense in term of the show.
+Animal characters tend to have more friends compared to humans and characters with the occupation other are way less likely to form a perceived friendship tie.
+Plus, we also observe that characters with the same occupation are 3x more likely to have form a perceived friendship tie with another character in their occupation, which makes a lot of sense considering that the show highly emphasizes the character's work life balance.
+
+# VII. ERGMs: Economic Exchange
+
+Finally, let's look at the economic exchange ERGMs.
+Again, I am curious in understanding if there is evidence of sociality and selective mixing based on occupation, and sociality based on character type.
+As the entertainment industry, specifically being an actor/actress, is essential to the show, I anticipate that these occupations will have more ties than other non entertainment occupations.
+depicted is demanding, with characters having to spend a lot of time working.
+As for selective mixing, I anticipate seeing characters from the same occupation tending to form more economic ties from other characters in their same occupation.
+
+Also, as stated previously, many of the human roles are insignificant, so I anticipate seeing humans having less economic exchange ties compared to the animals.
+
+Again there were some issues with degree so we are looking at the economic network without isolates.
+
+**Figure** 19: Total Economic Exchange Over Time ERGM Model Results\newpage
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+re_eco <- asNetwork(total_economic2)
+
+m1E <- ergm(re_eco ~ edges)
+
+m2E <- ergm(re_eco ~ edges + nodefactor("Animal") +
+             nodefactor("Occupation"))
+
+m3E <- ergm(re_eco ~ edges + nodefactor("Animal") + nodefactor("Occupation") +
+             nodematch("Occupation"))
+
+m4E <- ergm(re_eco ~ edges + nodefactor("Animal") + nodefactor("Occupation") +
+             nodematch("Occupation") + 
+             gwesp(decay = 0.25, fixed = T))
+
+modelsE <- list(m1E, m2E, m3E, m4E)
+modelsummary(modelsE, stars = T, exponentiate = T)
+```
+
+```{=tex}
+\begin{center}
+Figure 19 is the model summary of 4 different ERGM models for total economic exchange.
+\end{center}
+```
+Going through the models:
+
+**Model 1**: This is just a baseline that we can use for comparison.
+
+**Model 2**: In this model we are looking at sociality based on character type (animal vs. human) and occupation.
+
+Based on this model, we see that human characters are about 53% as likely to form an economic exchange tie.
+
+We can also observe that characters who have an occupation in entertainment are about 54% as likely to form an economic exchange tie compared to the baseline occupation, actor/actress.
+
+Characters with the occupation of other are around 18% as likely to form an economic exchange tie compared to an actor/actress.
+
+\
+**Model 3**: In this model we control for selective mixing.
+
+We are see that our previous significant results stay significant.
+But there is no significant evidence of selective mixing.
+
+**Model 4** - In this model we account for triadic closure.
+Our siginificant result is evidence for triadic closure.
+
+In this model, we may also want to note that our significant results from the other models are staying significant.
+With the inclusion of triadic closure, sociality of characters with the occupation entertainment and sociality of character type do become a little less significant, which may be important to note, but the result is still significant.
+
+Now, the question is what model fits the best to the original network?
+First, we can look at the AIC and BIC scores from our table.
+For these terms, a lower number signifies a better fit, so model 4 is looking like the best representation in regards to that.
+Looking at the goodness of fit for model 4, we see some consistently high p-values, so again model 4 seems to be the best representation of our original network.
+To check this, we are going to run some MCMC Processes.
+When we do, we see some more fuzzy caterpillars.
+
+Goodness of fit and MCMC data can be found in the appendix.
+
+What we seen in our models is similar to what we predicted and makes sense in term of the show.
+Animal characters tend to form economic exchange ties compared to humans and characters with the occupation other are way less likely to form economic ties.
+We do not see any evidence of selective mixing, which is interesting, but thinking more deeply about it, it would make sense that characters would form ties with various occupations with the way the categories were defined.
+Actors, entertainment, and written media occupations may need to form economic ties due to the many facets these jobs offer.
+
+# VIII. Conclusion
+
+In conclusion, we have learned a lot of information about the social networks in BoJack Horseman.
+We see that the economic exchange network is much more dense and has many more ties in comparison to the friendship network, which is interesting to see as that means fewer characters are connected through friendship, but mostly economically.
+We also observe that the main characters are central to both networks.
+When thinking about the show, it begins BJH having one non-work related friend, and the other main characters become more important to the story through an economic encounter with BJH that leads to a friendship.
+As the show continues, we see these characters become more significant, which is seen in their centrality to both networks.
+Lastly, in regard to our ERGMs, our theory of humans mainly being one dimensional is proven in both cases as humans as less likely to form ties compared to animal characters.
+We also see that when it comes to friendship, characters from the same occupation are more likely to form ties.
+
+With everything considered, I did not realize how much economics/work factors into this show when I watched it.
+I also did not realize that humans were not typically significant characters.
+Overall, it was very interesting to see the show through the lens of its social networks.
+
+# IX. Appendix
+
+**Perceived Friendship ERGMs:**
+
+Goodness of fit Model 1:
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+gof(m1TF)
+```
+
+Goodness of fit Model 2:
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+gof(m2TF)
+```
+
+Goodness of fit Model 3:
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+gof(m3TF)
+```
+
+Goodness of fit Model 4:
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+gof(m4TF)
+```
+
+MCM Data:
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+mcmc.diagnostics(m4TF)
+```
+
+**Economic Exchange ERGM:**
+
+Goodness of fit Model 1:
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+gof(m1E)
+```
+
+Goodness of fit Model 2:
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+gof(m2E)
+```
+
+Goodness of fit Model 3:
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+gof(m3E)
+```
+
+Goodness of fit Model 4:
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+gof(m4E)
+```
+
+MCMC Data:
+
+```{r fig.align='center', fig.width=10, fig.height=5}
+mcmc.diagnostics(m4E)
+```
+
+This project would not have been completed without the emotional support of Sam Haines.
